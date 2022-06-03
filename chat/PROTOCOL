@@ -1,0 +1,55 @@
+# Protocolo
+
+## Mensajes
+
+Todo los mensajes son por UDP. Constan de una accion, parámetro y payload (opcional).
+
+## Acciones
+
+- R: Registrarse.
+- L: Login.
+- S: Enviar mensaje.
+- M: Mensaje entrante.
+- Q: Consulta (query).
+- D: Desconectarse.
+- E: error
+
+
+## Registrarse
+
+Mensaje: R USERNAME
+    - USERNAME: Máximo 50 caracteres. Terminado en \0.
+
+Respuesta: R [0|1] 
+    - 0: OK
+    - 1: ERROR
+
+## Login
+
+Mensaje: L USERNAME
+
+Respuesta: L [0|1]
+    - 0: OK
+    - 1: ERROR
+
+## Enviar mensaje
+
+Mensaje: S USERNAME MENSAJE
+
+Respuesta: S [0|1]
+    - 0: OK
+    - 1: ERROR
+
+## Consulta
+
+Mensaje: Q [0|1]
+    - 0: Usuarios registrados
+    - 1: Usuarios conectados
+
+Respuesta: Q NUMERO
+
+## Desconectarse
+
+Mensaje: D
+
+Respuesta: -
