@@ -37,18 +37,19 @@
 // Tamaño del buffer en donde se reciben los mensajes.
 #define BUFSIZE 100
 
-// Descriptor de archivo del socket.
-static int fd;
 
 // Cierra el socket al recibir una señal SIGTERM.
 void handler(int signal)
 {
-    close(fd);
     exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char* argv[])
 {
+    // Descriptor de archivo del socket.
+    static int fd;
+
+    // Dirección asociada al socket.
     struct sockaddr_in addr;
 
     // Configura el manejador de señal SIGTERM.
