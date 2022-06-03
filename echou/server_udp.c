@@ -111,6 +111,14 @@ int main(int argc, char* argv[])
 
         // Imprime dirección del emisor y mensaje recibido.
         printf("[%s:%d] %s\n", inet_ntoa(src_addr.sin_addr), ntohs(src_addr.sin_port), buf);
+
+        // Envía eco
+        buf[n-1] = '\n';
+        n = sendto(fd, buf, strlen(buf), 0, (struct sockaddr*) &src_addr, src_addr_len);
+        if (n == -1) {
+            perror("sendto");
+            exit(EXIT_FAILURE);
+        }
     }
 
     // Cierra el socket.
