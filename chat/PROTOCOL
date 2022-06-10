@@ -15,16 +15,28 @@ Todo los mensajes son por UDP. Constan de una accion, parámetro y payload (opci
 - E: error
 
 
+## Estructuras de datos
+
+Respuesta genérica:
+    [CODIGO] [VALOR]
+
 ## Registrarse
 
-Mensaje: R USERNAME
-    - USERNAME: Máximo 50 caracteres. Terminado en \0.
+Protocolo: UDP
 
-Respuesta: R [0|1] 
-    - 0: OK
-    - 1: ERROR
+Mensaje: R USERNAME
+    - USERNAME: Máximo 25 caracteres. Terminado en \0.
+
+Respuesta: R ID
+    - >0: OK, retorna identificador (ID).
+    - <0 ERROR: valor absoluto indica el error:
+        - 0:    Error interno.
+        - 1:    Usuario con ese nombre ya registrado.
+        - 2:    Limite de usuarios alcanzado.
 
 ## Login
+
+Protocolo: TCP
 
 Mensaje: L USERNAME
 
@@ -34,7 +46,14 @@ Respuesta: L [0|1]
 
 ## Enviar mensaje
 
-Mensaje: S USERNAME MENSAJE
+Mensaje: S TYPE USERNAME DATA
+    - TYPE:
+        - 1: Mensaje de texto.
+        - 2: Archivo.
+    - DATA:
+        - 1: Mensaje de texto.
+        - 2: 1er mensaje: Tamaño en bytes del archivo.
+             Siguentes:   Bytes del archivo.
 
 Respuesta: S [0|1]
     - 0: OK

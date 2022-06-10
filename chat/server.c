@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
 
         user_t dest;
         char command = buf[0];
-        printf("%c\n", command);
+        printf("%s\n", buf);
 
         // Ejecuta el comando enviado por el cliente.
         switch(command) {
