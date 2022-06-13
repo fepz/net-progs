@@ -18,9 +18,10 @@
  * Private functions.
  */
 void* send_thread(void* args);
-void* recv_thread(void* args);
 int command_parser(const char* ucmd, char* cmd);
+void cmd_login(const char* ucmd, char* cmd);
 void cmd_register(const char* ucmd, char* cmd);
+void cmd_sendmsg(const char* ucmd, char* cmd);
 
 /**
  * Global declarations.
@@ -29,9 +30,13 @@ struct sockaddr_in dest_addr;
 socklen_t dest_addr_len = 0;
 int sock;
 
+static int logged = 0;
+static char username[25];
+static char prompt[30];
+
 int main(int argc, char *argv[])
 {
-    pthread_t recvt, sendt;
+    pthread_t sendt;
 
     struct sockaddr_in my_addr;
 
@@ -78,20 +83,13 @@ int main(int argc, char *argv[])
 
     printf("^C to exit.\n");
 
-    if (pthread_create(&recvt, NULL, recv_thread, NULL) > 0) {
-        perror("pthread_create");
-        exit(EXIT_FAILURE);
-    }
+    sprintf(prompt, "> ");
 
     if (pthread_create(&sendt, NULL, send_thread, NULL) > 0) {
         perror("pthread_create");
         exit(EXIT_FAILURE);
     }
 
-    if (pthread_join(recvt, NULL) > 0) {
-        perror("pthread_join");
-        exit(EXIT_FAILURE);
-    }
     if (pthread_join(sendt, NULL) > 0) {
         perror("pthread_join");
         exit(EXIT_FAILURE);
@@ -104,33 +102,24 @@ void* send_thread(void* args)
 {
     char *buf = malloc(MAX_LINE);
     char *cmd = malloc(MAX_LINE);
-    //int buflen = 0;
     do {
-        printf("> "); fflush(stdout);
+        printf("%s", prompt); fflush(stdout);
         fgets(buf, MAX_LINE, stdin);
-        command_parser(buf, cmd);
-        printf("%s\n", cmd);
-        buf[strcspn(buf, "\n")] = '\0'; // removes new line
-        //buflen = strlen(buf);
-        //sendto(sock, &buflen, sizeof(buflen), 0, (struct sockaddr*) &dest_addr, sizeof(struct sockaddr_in));
-        sendto(sock, cmd, strlen(cmd), 0, (struct sockaddr*) &dest_addr, sizeof(struct sockaddr_in));
-    //} while (buflen > 0);
+        if (command_parser(buf, cmd) == 0) {
+            printf("%s\n", cmd);
+            buf[strcspn(buf, "\n")] = '\0'; // removes new line
+            sendto(sock, cmd, strlen(cmd), 0, (struct sockaddr*) &dest_addr, 
+                    sizeof(struct sockaddr_in));
+
+            // Recibe respuesta del servidor.
+            ssize_t n = recv(sock, buf, MAX_LINE, 0);
+            if (n == -1) {
+                perror("recv");
+                exit(EXIT_FAILURE);
+            }
+            printf("%s\n", buf);
+        }
     } while (1);
-
-    exit(EXIT_SUCCESS);
-}
-
-void* recv_thread(void* args)
-{
-    char *buf = malloc(MAX_LINE);
-    do {
-        fflush(stdout);
-        //recvfrom(sock, &buflen, sizeof(buflen), 0, (struct sockaddr*) &dest_addr, &dest_addr_len);
-        recvfrom(sock, buf, MAX_LINE, 0, (struct sockaddr*) &dest_addr, &dest_addr_len);
-        //buf[r] = '\0';
-        // Use VT100 escape code to delete the > character
-        printf("\33[2K\r[%s:%d]: %s\n> ", inet_ntoa(dest_addr.sin_addr), ntohs(dest_addr.sin_port), buf);
-    } while(1);
 
     exit(EXIT_SUCCESS);
 }
@@ -140,13 +129,20 @@ int command_parser(const char* ucmd, char* cmd)
     const char* pcmd = ucmd;
     
     if (*(pcmd++) != '/')
-        return 0;
+        return 1;
 
     switch (*pcmd) {
         case 'r':
             printf("Register\n");
             cmd_register(ucmd, cmd);
-            break;
+            return 0;
+        case 'l':
+            printf("Login\n");
+            cmd_login(ucmd, cmd);
+            return 0;
+        case 's':
+            printf("Send message\n");
+            cmd_sendmsg(ucmd, cmd);
         case 'q':
             printf("Quit\n");
             exit(EXIT_SUCCESS);
@@ -154,7 +150,7 @@ int command_parser(const char* ucmd, char* cmd)
             printf("Unknown command\n");
     }
     
-    return 0;
+    return 1;
 }
 
 void cmd_register(const char* ucmd, char* cmd)
@@ -162,5 +158,26 @@ void cmd_register(const char* ucmd, char* cmd)
     char name[25];
     sscanf(ucmd, "/r %s", name);
     sprintf(cmd, "R%s", name);
+}
+
+void cmd_login(const char* ucmd, char* cmd)
+{
+    char buf[25];
+    logged = 1;
+    sscanf(ucmd, "/l %s", buf);
+    sprintf(cmd, "L%s", buf);
+    bzero(username, sizeof(username));
+    strncpy(username, buf, strlen(buf));
+    bzero(prompt, sizeof(prompt));
+    sprintf(prompt, "(%s) > ", username);
+}
+
+void cmd_sendmsg(const char* ucmd, char* cmd)
+{
+    char dst[25];
+    char msg[100];
+    sscanf(ucmd, "/s %s %s", dst, msg);
+    printf("%s\n", dst);
+    printf("%s\n", msg);
 }
 

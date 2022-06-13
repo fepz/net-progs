@@ -36,8 +36,6 @@ Respuesta: R ID
 
 ## Login
 
-Protocolo: TCP
-
 Mensaje: L USERNAME
 
 Respuesta: L [0|1]
@@ -50,6 +48,8 @@ Mensaje: S TYPE USERNAME DATA
     - TYPE:
         - 1: Mensaje de texto.
         - 2: Archivo.
+    - USERNAME
+        - Nombre del destinatario, terminado en \0
     - DATA:
         - 1: Mensaje de texto.
         - 2: 1er mensaje: Tamaño en bytes del archivo.

@@ -90,11 +90,11 @@ int user_registration(char* username)
     return -1;
 }
 
-int user_login(int id, struct sockaddr_in addr)
+int user_login(const char* username, const struct sockaddr_in addr)
 {
     int i;
     for (i = 0; i < 100; i++) {
-        if (users[i].id == id) {
+        if (strncmp(username, users[i].name, strlen(username)) == 0) {
             users[i].status = 1;
             users[i].addr = addr;
             printf("[%s:%d]\n", inet_ntoa(users[i].addr.sin_addr), ntohs(users[i].addr.sin_port));
@@ -102,6 +102,17 @@ int user_login(int id, struct sockaddr_in addr)
         }
     }
     return -1;
+}
+
+user_t* user_find(const char* username)
+{
+    int i;
+    for (i = 0; i < 100; i++) {
+        if (strncmp(username, users[i].name, strlen(username)) == 0) {
+            return &(users[i]);
+        }
+    }
+    return 0;
 }
 
 int main(int argc, char* argv[])
@@ -152,47 +163,52 @@ int main(int argc, char* argv[])
     printf("Escuchando en %s:%d ...\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
     
     char buf[BUFSIZE];
+    char send_buf[BUFSIZE];
     struct sockaddr_in src_addr;
     socklen_t src_addr_len;
     
     for(;;) {
         memset(&src_addr, 0, sizeof(struct sockaddr_in));
         src_addr_len = sizeof(struct sockaddr_in);
+        bzero(buf, BUFSIZE);
+        bzero(send_buf, BUFSIZE);
 
-        // Recibe un mensaje entrante.
+        // Recibe mensaje de un cliente.
         ssize_t n = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr*) &src_addr, &src_addr_len); 
         if(n == -1) {
             perror("recv");
             exit(EXIT_FAILURE);
         }
 
-        user_t dest;
+        user_t *dest;
         char command = buf[0];
         printf("%s\n", buf);
 
         // Ejecuta el comando enviado por el cliente.
         switch(command) {
             case 'R':
-                sprintf(buf, "%d\n", user_registration(&(buf[1])));
+                sprintf(send_buf, "%d", user_registration(&(buf[1])));
                 break;
             case 'L':
-                sprintf(buf, "%d\n", user_login(atoi(&buf[1]), src_addr));
+                sprintf(send_buf, "%d", user_login(&(buf[1]), src_addr));
                 break;
             case 'Q':
-                sprintf(buf, "%d\n", user_count(atoi(&buf[1])));
+                sprintf(send_buf, "%d", user_count(atoi(&buf[1])));
                 break;
             case 'S':
-                dest = users[atoi(&buf[1])-1];
-                sprintf(buf, "%s\n", &buf[2]);
-                n = sendto(fd, buf, strlen(&buf[2])+1, 0, (struct sockaddr*) &(dest.addr), src_addr_len);
+                dest = user_find(&buf[1]);
+                sprintf(send_buf, "%s\n", &buf[2]);
+                n = sendto(fd, send_buf, strlen(&buf[2])+1, 0, 
+                        (struct sockaddr*) &(dest->addr), src_addr_len);
                 sprintf(buf, "%ld\n", n);
                 break;
             default:
-                sprintf(buf, "E\n");
+                sprintf(buf, "E");
         }
 
         // Envía la respuesta al cliente.
-        n = sendto(fd, buf, strlen(buf), 0, (struct sockaddr*) &src_addr, src_addr_len);
+        n = sendto(fd, send_buf, strlen(send_buf) + 1, 0, 
+                (struct sockaddr*) &src_addr, src_addr_len);
         if (n == -1) {
             perror("sendto");
             exit(EXIT_FAILURE);
